@@ -1,0 +1,15 @@
+[versions]
+androidGradlePlugin = "9.2.1"
+androidxCore = "1.13.1"
+appcompat = "1.6.1"
+material = "1.11.0"
+kotlin = "2.3.20"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
