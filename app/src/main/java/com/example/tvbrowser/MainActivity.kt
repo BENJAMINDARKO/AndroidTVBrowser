@@ -451,6 +451,7 @@ class MainActivity : AppCompatActivity() {
         val btnBookmarks = makeRailButton(R.drawable.ic_star_filled, "Bookmarks")
         val btnDownloads = makeRailButton(R.drawable.ic_download, "Downloads")
         val btnMedia     = makeRailButton(R.drawable.ic_clapperboard, "Media")
+        val btnAdBlock   = makeRailButton(R.drawable.ic_shield, "AdBlock")
         val btnSettings  = makeRailButton(R.drawable.ic_settings, "Settings")
 
         val tabsBadgeHost = FrameLayout(this).apply {
@@ -487,6 +488,7 @@ class MainActivity : AppCompatActivity() {
         leftNavRail.addView(btnBookmarks)
         leftNavRail.addView(btnDownloads)
         leftNavRail.addView(btnMedia)
+        leftNavRail.addView(btnAdBlock)
         leftNavRail.addView(btnSettings)
 
         // Sidebar Navigation click routing
@@ -517,10 +519,11 @@ class MainActivity : AppCompatActivity() {
         btnMedia.setOnClickListener {
             showScreen(SCREEN_MEDIA)
         }
+        btnAdBlock.setOnClickListener { showAdBlockerDashboard() }
         btnSettings.setOnClickListener { showSettingsDialog() }
 
         // Sidebar D-pad left/right listeners
-        listOf(btnHome, btnSearch, btnTabs, btnBookmarks, btnDownloads, btnMedia, btnSettings).forEach { btn ->
+        listOf(btnHome, btnSearch, btnTabs, btnBookmarks, btnDownloads, btnMedia, btnAdBlock, btnSettings).forEach { btn ->
             btn.setOnKeyListener { _, keyCode, event ->
                 if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
                     if (currentScreenId == SCREEN_DASHBOARD) {
@@ -561,30 +564,58 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (52 * dp).toInt()
+                (56 * dp).toInt()
             ).apply { bottomMargin = (14 * dp).toInt() }
+            clipChildren = false
+            clipToPadding = false
         }
 
         val logoLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            clipChildren = false
+            clipToPadding = false
         }
         logoLayout.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_globe)
             setColorFilter(Color.WHITE)
             val sz = (34 * dp).toInt()
             setPadding((6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt())
-            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { rightMargin = (10 * dp).toInt() }
+            layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
+                rightMargin = (10 * dp).toInt()
+                gravity = Gravity.CENTER_VERTICAL
+            }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(resolveColor(ACCENT_GLOW))
             }
         })
         logoLayout.addView(TextView(this).apply {
-            text = "TV Browser"
+            val appVer = try {
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+            } catch (e: Exception) {
+                "1.0"
+            }
+            val titleBuilder = android.text.SpannableStringBuilder("TV Browser $appVer").apply {
+                val start = "TV Browser".length
+                setSpan(android.text.style.SuperscriptSpan(), start, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(android.text.style.RelativeSizeSpan(0.6f), start, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(android.text.style.ForegroundColorSpan(resolveColor(ACCENT_CYAN)), start, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            text = titleBuilder
             textSize = 20f
             setTextColor(resolveColor(TEXT_PRIMARY))
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.CENTER_VERTICAL
+            }
         })
         topHeaderRow.addView(logoLayout)
         topHeaderRow.addView(View(this).apply { layoutParams = LinearLayout.LayoutParams(0, 0, 1f) })
@@ -592,7 +623,43 @@ class MainActivity : AppCompatActivity() {
         val statusPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            clipChildren = false
+            clipToPadding = false
         }
+
+        // About Info Button
+        val aboutBtn = ImageView(this).apply {
+            setImageResource(R.drawable.ic_info)
+            setColorFilter(resolveColor(TEXT_PRIMARY))
+            isFocusable = true
+            isFocusableInTouchMode = true
+            val btnSz = (42 * dp).toInt()
+            setPadding((11 * dp).toInt(), (11 * dp).toInt(), (11 * dp).toInt(), (11 * dp).toInt())
+            layoutParams = LinearLayout.LayoutParams(btnSz, btnSz).apply {
+                rightMargin = (14 * dp).toInt()
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(resolveColor(BG_SURFACE))
+            }
+            setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.05f else 1.0f).scaleY(if (hasFocus) 1.05f else 1.0f).setDuration(120).start()
+                v.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(resolveColor(if (hasFocus) BG_SURFACE_FOCUS else BG_SURFACE))
+                    if (hasFocus) setStroke((2 * dp).toInt(), resolveColor(ACCENT_GLOW))
+                }
+            }
+            setOnClickListener {
+                lastFocusedViewBeforeOverlay = this
+                showAboutDialog()
+            }
+        }
+        statusPanel.addView(aboutBtn)
 
         // Quick Theme Toggle Button
         val themeBtn = ImageView(this).apply {
@@ -748,9 +815,12 @@ class MainActivity : AppCompatActivity() {
             setColorFilter(resolveColor(TEXT_PRIMARY))
             isFocusable = true
             isFocusableInTouchMode = true
-            val size = (52 * dp).toInt()
-            setPadding((14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt())
-            layoutParams = LinearLayout.LayoutParams(size, size).apply { leftMargin = (12 * dp).toInt() }
+            val size = (44 * dp).toInt()
+            setPadding((11 * dp).toInt(), (11 * dp).toInt(), (11 * dp).toInt(), (11 * dp).toInt())
+            layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                leftMargin = (12 * dp).toInt()
+                gravity = Gravity.CENTER_VERTICAL
+            }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(resolveColor(BG_SURFACE))
@@ -3218,12 +3288,17 @@ class MainActivity : AppCompatActivity() {
         val overlay = FocusTrapFrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             setBackgroundColor(resolveColor("#E607070C"))
+            clipChildren = false
+            clipToPadding = false
         }
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams((440 * dp).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER }
             background = GradientDrawable().apply { setColor(resolveColor(BG_SURFACE)); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), resolveColor("#2A2A3E")) }
             setPadding((32 * dp).toInt(), (32 * dp).toInt(), (32 * dp).toInt(), (32 * dp).toInt())
+            clipChildren = false
+            clipToPadding = false
+            applyPremiumShadow(dp, 16f, false)
         }
 
         card.addView(TextView(this).apply {
@@ -3254,13 +3329,20 @@ class MainActivity : AppCompatActivity() {
         card.addView(btnManage, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = (16 * dp).toInt() })
 
         val btnClose = makeModernButton("Close")
-        btnClose.setOnClickListener { rootContainer.removeView(overlay) }
+        btnClose.setOnClickListener {
+            rootContainer.removeView(overlay)
+            lastFocusedViewBeforeOverlay?.requestFocus()
+        }
         card.addView(btnClose, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         overlay.addView(card)
         lastFocusedViewBeforeOverlay = currentFocus
         rootContainer.addView(overlay)
         btnClose.post { btnClose.requestFocus() }
+        overlay.onBackPressed = {
+            rootContainer.removeView(overlay)
+            lastFocusedViewBeforeOverlay?.requestFocus()
+        }
     }
 
     private fun showBlocklistManagement() {
@@ -3269,12 +3351,17 @@ class MainActivity : AppCompatActivity() {
         val overlay = FocusTrapFrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             setBackgroundColor(resolveColor("#E607070C"))
+            clipChildren = false
+            clipToPadding = false
         }
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = FrameLayout.LayoutParams((460 * dp).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER }
+            layoutParams = FrameLayout.LayoutParams((480 * dp).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER }
             background = GradientDrawable().apply { setColor(resolveColor(BG_SURFACE)); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), resolveColor("#2A2A3E")) }
             setPadding((24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt())
+            clipChildren = false
+            clipToPadding = false
+            applyPremiumShadow(dp, 16f, false)
         }
 
         card.addView(TextView(this).apply {
@@ -3283,36 +3370,103 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 0, 0, (12 * dp).toInt())
         })
 
-        // Toggle list filters
+        // Content ScrollView to avoid vertical overflow on TV screen
+        val scrollContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+        }
+        val scrollWrapper = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (300 * dp).toInt()).apply {
+                bottomMargin = (12 * dp).toInt()
+            }
+        }
+        val mainScroll = ScrollView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), 0)
+            clipToPadding = false
+            clipChildren = false
+        }
+        mainScroll.addView(scrollContent)
+        scrollWrapper.addView(mainScroll)
+        card.addView(scrollWrapper)
+
+        // Toggle list filters (Redesigned as custom premium settings rows)
         app.adBlockEngine.filterLists.forEach { filterList ->
             val isEnabled = prefs.getBoolean("adblock_list_${filterList.name}", true)
-            val btn = makeModernButton("${filterList.name}: ${if (isEnabled) "ENABLED" else "DISABLED"}")
-            btn.setOnClickListener {
-                val nextState = !isEnabled
-                prefs.edit().putBoolean("adblock_list_${filterList.name}", nextState).apply()
-                Toast.makeText(this@MainActivity, "${filterList.name} set to ${if (nextState) "ENABLED" else "DISABLED"}. Loading...", Toast.LENGTH_SHORT).show()
-                Thread { app.adBlockEngine.loadRules(this@MainActivity) }.start()
-                rootContainer.removeView(overlay)
-                showBlocklistManagement()
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                isFocusable = true
+                isFocusableInTouchMode = true
+                setPadding((16 * dp).toInt(), (12 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
+                background = GradientDrawable().apply {
+                    setColor(resolveColor(BG_SURFACE))
+                    cornerRadius = 12 * dp
+                    setStroke((1 * dp).toInt(), resolveColor("#2A2A3E"))
+                }
+                setOnFocusChangeListener { v, hasFocus ->
+                    v.animate().scaleX(if (hasFocus) 1.03f else 1f).scaleY(if (hasFocus) 1.03f else 1f).setDuration(120).start()
+                    v.background = GradientDrawable().apply {
+                        setColor(resolveColor(if (hasFocus) BG_SURFACE_FOCUS else BG_SURFACE))
+                        cornerRadius = 12 * dp
+                        setStroke(if (hasFocus) (3 * dp).toInt() else (1 * dp).toInt(), resolveColor(if (hasFocus) ACCENT_GLOW else "#2A2A3E"))
+                    }
+                }
+                setOnClickListener {
+                    val nextState = !isEnabled
+                    prefs.edit().putBoolean("adblock_list_${filterList.name}", nextState).apply()
+                    Toast.makeText(this@MainActivity, "${filterList.name} set to ${if (nextState) "ENABLED" else "DISABLED"}. Loading...", Toast.LENGTH_SHORT).show()
+                    Thread { app.adBlockEngine.loadRules(this@MainActivity) }.start()
+                    rootContainer.removeView(overlay)
+                    showBlocklistManagement()
+                }
             }
-            card.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = (8 * dp).toInt() })
+
+            row.addView(ImageView(this).apply {
+                setImageResource(R.drawable.ic_shield)
+                val iconSize = (18 * dp).toInt()
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize).apply { rightMargin = (12 * dp).toInt() }
+                setColorFilter(resolveColor(if (isEnabled) ACCENT_CYAN else TEXT_MUTED))
+            })
+
+            row.addView(TextView(this).apply {
+                text = filterList.name
+                textSize = 14f
+                setTextColor(resolveColor(if (isEnabled) TEXT_PRIMARY else TEXT_MUTED))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+
+            row.addView(View(this).apply {
+                val sz = (16 * dp).toInt()
+                layoutParams = LinearLayout.LayoutParams(sz, sz)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    if (isEnabled) {
+                        setColor(resolveColor(ACCENT_CYAN))
+                    } else {
+                        setColor(Color.TRANSPARENT)
+                        setStroke((2 * dp).toInt(), resolveColor(TEXT_MUTED))
+                    }
+                }
+            })
+
+            scrollContent.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = (8 * dp).toInt() })
         }
 
-        card.addView(TextView(this).apply {
+        scrollContent.addView(TextView(this).apply {
             text = "Custom Domain Rules (Picker)"; textSize = 16f
             setTextColor(resolveColor(TEXT_PRIMARY)); typeface = Typeface.DEFAULT_BOLD
             setPadding(0, (14 * dp).toInt(), 0, (8 * dp).toInt())
         })
 
-        // Load custom domain rules layout
+        // Inline custom domain rules container (no nested ScrollView!)
         val rulesContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (120 * dp).toInt())
+            clipChildren = false
+            clipToPadding = false
         }
-        val rulesScroll = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT)
-        }
-        rulesScroll.addView(rulesContainer)
+        scrollContent.addView(rulesContainer)
 
         var hasCustomRules = false
         customBlockRules.forEach { (domain, selectors) ->
@@ -3322,6 +3476,8 @@ class MainActivity : AppCompatActivity() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding((8 * dp).toInt(), (4 * dp).toInt(), (8 * dp).toInt(), (4 * dp).toInt())
+                    clipChildren = false
+                    clipToPadding = false
                 }
                 ruleRow.addView(TextView(this).apply {
                     text = "$domain -> $selector"; textSize = 11f; setTextColor(resolveColor(TEXT_PRIMARY))
@@ -3357,14 +3513,22 @@ class MainActivity : AppCompatActivity() {
         if (!hasCustomRules) {
             rulesContainer.addView(TextView(this).apply { text = "No custom element block rules yet."; textSize = 12f; setTextColor(resolveColor(TEXT_MUTED)) })
         }
-        card.addView(rulesScroll)
 
-        val btnClose = makeModernButton("Close").apply { setOnClickListener { rootContainer.removeView(overlay) } }
-        card.addView(btnClose, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = (16 * dp).toInt() })
+        val btnClose = makeModernButton("Close").apply {
+            setOnClickListener {
+                rootContainer.removeView(overlay)
+                lastFocusedViewBeforeOverlay?.requestFocus()
+            }
+        }
+        card.addView(btnClose, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         overlay.addView(card)
         rootContainer.addView(overlay)
         btnClose.post { btnClose.requestFocus() }
+        overlay.onBackPressed = {
+            rootContainer.removeView(overlay)
+            lastFocusedViewBeforeOverlay?.requestFocus()
+        }
     }
 
     private fun showEditSelectorDialog(domain: String, oldSelector: String) {
@@ -3372,12 +3536,17 @@ class MainActivity : AppCompatActivity() {
         val overlay = FocusTrapFrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             setBackgroundColor(resolveColor("#E607070C"))
+            clipChildren = false
+            clipToPadding = false
         }
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams((440 * dp).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER }
             background = GradientDrawable().apply { setColor(resolveColor(BG_SURFACE)); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), resolveColor("#2A2A3E")) }
             setPadding((28 * dp).toInt(), (28 * dp).toInt(), (28 * dp).toInt(), (28 * dp).toInt())
+            clipChildren = false
+            clipToPadding = false
+            applyPremiumShadow(dp, 16f, false)
         }
 
         card.addView(TextView(this).apply {
@@ -3404,7 +3573,12 @@ class MainActivity : AppCompatActivity() {
         inputContainer.addView(input)
         card.addView(inputContainer)
 
-        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            clipChildren = false
+            clipToPadding = false
+        }
         val cancelBtn = makeModernButton("Cancel").apply {
             setOnClickListener {
                 rootContainer.removeView(overlay)
@@ -3437,6 +3611,123 @@ class MainActivity : AppCompatActivity() {
         overlay.addView(card)
         rootContainer.addView(overlay)
         input.post { input.requestFocus() }
+        overlay.onBackPressed = {
+            rootContainer.removeView(overlay)
+            showBlocklistManagement()
+        }
+    }
+
+    private fun showAboutDialog() {
+        val dp = resources.displayMetrics.density
+        val overlay = FocusTrapFrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(resolveColor("#E607070C"))
+            clipChildren = false
+            clipToPadding = false
+        }
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams((400 * dp).toInt(), FrameLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER }
+            background = GradientDrawable().apply { setColor(resolveColor(BG_SURFACE)); cornerRadius = 20 * dp; setStroke((1 * dp).toInt(), resolveColor("#2A2A3E")) }
+            setPadding((28 * dp).toInt(), (28 * dp).toInt(), (28 * dp).toInt(), (28 * dp).toInt())
+            clipChildren = false
+            clipToPadding = false
+            applyPremiumShadow(dp, 16f, false)
+        }
+
+        // Title and Logo
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, (16 * dp).toInt())
+        }
+        header.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_globe)
+            setColorFilter(Color.WHITE)
+            val sz = (36 * dp).toInt()
+            setPadding((6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt())
+            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { rightMargin = (12 * dp).toInt() }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(resolveColor(ACCENT_GLOW))
+            }
+        })
+        header.addView(TextView(this).apply {
+            text = "TV Browser"
+            textSize = 20f
+            setTextColor(resolveColor(TEXT_PRIMARY))
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        })
+        card.addView(header)
+
+        // Version Info
+        val appVer = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+        } catch (e: Exception) {
+            "1.0"
+        }
+        card.addView(TextView(this).apply {
+            text = "Version $appVer"
+            textSize = 13f
+            setTextColor(resolveColor(ACCENT_CYAN))
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, (14 * dp).toInt())
+        })
+
+        // Description
+        card.addView(TextView(this).apply {
+            text = "A premium, private, and customizable web browser designed specifically for Android TV. Fully optimized for simple D-pad controller navigation."
+            textSize = 14f
+            setTextColor(resolveColor(TEXT_MUTED))
+            setPadding(0, 0, 0, (20 * dp).toInt())
+        })
+
+        // Features list
+        val features = listOf(
+            "Built-in High-Performance AdBlocker",
+            "Left Navigation Rail for quick switching",
+            "Custom Search Engines & User Agents",
+            "True OLED Dark Mode & customizable themes"
+        )
+        features.forEach { feature ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 0, 0, (8 * dp).toInt())
+            }
+            row.addView(ImageView(this).apply {
+                setImageResource(R.drawable.ic_shield)
+                setColorFilter(resolveColor(ACCENT_CYAN))
+                layoutParams = LinearLayout.LayoutParams((14 * dp).toInt(), (14 * dp).toInt()).apply { rightMargin = (8 * dp).toInt() }
+            })
+            row.addView(TextView(this).apply {
+                text = feature
+                textSize = 12f
+                setTextColor(resolveColor(TEXT_PRIMARY))
+            })
+            card.addView(row)
+        }
+
+        // Spacing before close
+        card.addView(View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(1, (16 * dp).toInt())
+        })
+
+        val btnClose = makeModernButton("Close").apply {
+            setOnClickListener {
+                rootContainer.removeView(overlay)
+                lastFocusedViewBeforeOverlay?.requestFocus()
+            }
+        }
+        card.addView(btnClose, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        overlay.addView(card)
+        rootContainer.addView(overlay)
+        btnClose.post { btnClose.requestFocus() }
+        overlay.onBackPressed = {
+            rootContainer.removeView(overlay)
+            lastFocusedViewBeforeOverlay?.requestFocus()
+        }
     }
 
     private fun startElementPicker() {

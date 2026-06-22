@@ -12,8 +12,11 @@ Deployable package installation files:
 
 ### D-pad Remote Control Optimization
 * Solid virtual cursor with accent glow indicators.
-* Thick 3dp outline highlights when views receive focus.
-* Scaled zoom card animation (1.08x) for clear visual feedback.
+* Thick outline highlights and scale animation (up to 1.08x) for clear visual feedback, fully optimized to prevent border clipping.
+* Perfect vertical gravity alignment for all circular status/header buttons.
+
+### AdBlocker Management
+* Accessible dedicated "AdBlock" button in the left navigation rail to configure blocker rules.
 
 ### Right-Sliding Settings Panel Drawer
 * Settings slide in from the right edge with clean decelerating animation.
@@ -22,6 +25,10 @@ Deployable package installation files:
 ### Redesigned Search Engine Selector
 * Picker dialog displays choices as interactive list rows.
 * Features search icons, engine titles, and circle selected dots.
+
+### About Dialog Overlay
+* Sleek informational overlay presenting versioning, credits, and key features.
+* Fully styled modal container with premium dark translucency.
 
 ### Visual Themes
 * Dark Mode: True Black (#000000) for OLED screen compatibility.
@@ -40,3 +47,9 @@ Deployable package installation files:
 
 ### Right-Sliding Settings Panel
 ![Right-Sliding Settings Drawer](screenshots/settings_drawer.png)
+
+### Unclipped Focused Status Bar Buttons
+![Unclipped Focused Buttons](screenshots/header_unclipped.png)
+
+### About Dialog Overlay
+![About Dialog Overlay](screenshots/about_dialog.png)
